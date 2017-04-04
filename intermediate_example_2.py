@@ -59,17 +59,18 @@ class IntermediateExample2(object):
 		sigma_stacked = tf.transpose(tf.stack([sigma_samples]*N, axis=0), [1, 0, 2])
 		pi_stacked = tf.stack([self.pi_prob]*K, axis=0)
 		temp = (x_stacked - mu_stacked)**2 / sigma_stacked
+		eps = 1e-10	# A small number to be added in to log to avoid NaN
 		
 		self.ELBO = tf.reduce_mean(-0.5 * (1.0/self.sigma_mu) * tf.reduce_sum(mu_samples**2, axis=1) - \
-				0.5 * (1.0/self.sigma_sigma) * tf.reduce_sum(tf.log(sigma_samples)**2, axis=1) - \
-				0.5 * tf.reduce_sum(tf.matmul(self.pi_prob, tf.transpose(tf.log(sigma_samples))), axis=0) - \
+				0.5 * (1.0/self.sigma_sigma) * tf.reduce_sum(tf.log(eps + sigma_samples)**2, axis=1) - \
+				0.5 * tf.reduce_sum(tf.matmul(self.pi_prob, tf.transpose(tf.log(eps + sigma_samples))), axis=0) - \
 				0.5 * tf.reduce_sum(tf.multiply(pi_stacked, temp), axis=[1, 2]) + \
 				0.5 * tf.reduce_sum(((mu_samples-tf.stack([self.m_mu]*K, axis=0))**2)/tf.stack([self.s_mu**2]*K, axis=0), axis=1) + \
-				0.5 * tf.reduce_sum(((tf.log(sigma_samples)-tf.stack([self.m_sigma]*K, axis=0))**2)/tf.stack([self.s_sigma**2]*K, axis=0), axis=1)				
+				0.5 * tf.reduce_sum(((tf.log(eps + sigma_samples)-tf.stack([self.m_sigma]*K, axis=0))**2)/tf.stack([self.s_sigma**2]*K, axis=0), axis=1)				
 				) + \
-				0.5 * tf.reduce_sum(tf.log(self.s_sigma**2)) + \
-				0.5 * tf.reduce_sum(tf.log(self.s_mu**2)) - \
-				tf.reduce_sum(tf.multiply(self.pi_prob, tf.log(self.pi_prob)))
+				0.5 * tf.reduce_sum(tf.log(eps + self.s_sigma**2)) + \
+				0.5 * tf.reduce_sum(tf.log(eps + self.s_mu**2)) - \
+				tf.reduce_sum(tf.multiply(self.pi_prob, tf.log(eps + self.pi_prob)))
 		
 		self.ELBO = -self.ELBO
 		
